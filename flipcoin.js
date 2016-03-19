@@ -3,12 +3,12 @@
     Section: 1
     Node.js Web Service API to flip a coin
  */
-
+"use strict";
 // Declare a set of variables to be use
 var serverPort = 3000;
 var wsStats = "/stats";
 var wsFlip = "/flip";
-var score = { win: 0, losses: 0};
+var score = {win: 0, losses: 0};
 
 // Include the express module and initiate the app
 var express = require("express");
@@ -21,8 +21,8 @@ var parser = require("body-parser");
 app.use(parser.json());
 
 // Expose GET on /stats
-app.get(wsStats, function (request, response){
-    console.log("Serving GET on " + wsStats);
+app.get(wsStats, function (request, response) {
+    console.log("Serving GET on " + request.url);
 
     // Send back the score statistic
     response.status(200);
@@ -32,13 +32,13 @@ app.get(wsStats, function (request, response){
 });
 
 // Expose POST on flip
-app.post(wsFlip, function (request, response){
+app.post(wsFlip, function (request, response) {
+
+    console.log("Serving POST on " + request.url);
 
     var flip = {};
     var playerCall;
-    var coin;
-
-    console.log("Serving POST on " + wsFlip);
+    var coin = "tails";
 
     // Parser middleware will create a request.body
     if (request.hasOwnProperty("body")) {
@@ -48,29 +48,31 @@ app.post(wsFlip, function (request, response){
             playerCall = request.body.call.trim();
 
             if (playerCall === "heads" || playerCall === "tails") {
-               // Flip the coin
-               coin = (Math.floor((Math.random() * 2) + 1) === 1) ? "heads" : "tails";
 
-               if (coin === playerCall) {
-                   // Set result
-                   flip.result = "win";
-                   // Update score 
-                   score.win = score.win + 1;
+                // Flip the coin if we get a 1 then it's heads else tails
+                if (Math.floor(Math.random() * 2) === 1) {
+                    coin = "heads";
+                }
 
-               } else {
-                   flip.result = "lose";
-                   score.losses = score.losses + 1;
-               }
+                if (coin === playerCall) {
+                    // Set result
+                    flip.result = "win";
+                    // Update score
+                    score.win = score.win + 1;
 
-                
+                } else {
+                    flip.result = "lose";
+                    score.losses = score.losses + 1;
+                }
+
             } else {
-                console.log ("Invalid call");
-                flip.error = "Invalid call value:  Expect either heads or tails";
+                console.log("Invalid call");
+                flip.error = "Invalid call value. Expect either heads or tails";
             }
         } else {
             // Flip does not contain call data
-            console.log ("Invalid input for POST");
-            flip.error = "Improper data. Expect {call: head|tail} format";
+            console.log("Invalid input for POST");
+            flip.error = "Improper data. Expect {call: heads | tails } format";
         }
 
     } else {
