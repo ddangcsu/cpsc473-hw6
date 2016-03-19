@@ -1,0 +1,14 @@
+{
+  "name": "flipcoin",
+  "version": "1.0.0",
+  "description": "A simple Webservice to play a flipcoin game",
+  "main": "flipcoin.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "David Dang",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.13.4"
+  }
+}
