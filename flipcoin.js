@@ -79,6 +79,11 @@ app.post(wsFlip, function (request, response) {
         console.log("Parser is not working no body object");
     }
 
+    //Output on server console to show result info
+    console.log("User call: " + playerCall);
+    console.log("Coin flip: " + coin);
+    console.log("Result is: " + flip.result);
+
     response.status(200);
     response.send(JSON.stringify(flip));
     response.end();
