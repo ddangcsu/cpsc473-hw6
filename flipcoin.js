@@ -8,7 +8,10 @@
 var serverPort = 3000;
 var wsStats = "/stats";
 var wsFlip = "/flip";
-var score = {wins: 0, losses: 0};
+var score = {
+    wins: 0,
+    losses: 0
+};
 
 // Include the express module and initiate the app
 var express = require("express");
