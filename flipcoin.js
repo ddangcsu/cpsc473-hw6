@@ -8,7 +8,7 @@
 var serverPort = 3000;
 var wsStats = "/stats";
 var wsFlip = "/flip";
-var score = {win: 0, losses: 0};
+var score = {wins: 0, losses: 0};
 
 // Include the express module and initiate the app
 var express = require("express");
@@ -25,9 +25,7 @@ app.get(wsStats, function (request, response) {
     console.log("Serving GET on " + request.url);
 
     // Send back the score statistic
-    response.status(200);
-    response.send(JSON.stringify(score));
-    response.end();
+    response.status(200).json(score).end();
 
 });
 
@@ -58,7 +56,7 @@ app.post(wsFlip, function (request, response) {
                     // Set result
                     flip.result = "win";
                     // Update score
-                    score.win = score.win + 1;
+                    score.wins = score.wins + 1;
 
                 } else {
                     flip.result = "lose";
@@ -84,9 +82,7 @@ app.post(wsFlip, function (request, response) {
     console.log("Coin flip: " + coin);
     console.log("Result is: " + flip.result);
 
-    response.status(200);
-    response.send(JSON.stringify(flip));
-    response.end();
+    response.status(200).json(flip).end();
 
 });
 
