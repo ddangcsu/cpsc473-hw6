@@ -1,7 +1,7 @@
 {
   "name": "flipcoin",
-  "version": "1.0.0",
-  "description": "A simple Webservice to play a flipcoin game",
+  "version": "1.0.1",
+  "description": "An improved version of flipcoin with Redis",
   "main": "flipcoin.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.15.0",
-    "express": "^4.13.4"
+    "express": "^4.13.4",
+    "redis": "^2.6.0-1"
   }
 }

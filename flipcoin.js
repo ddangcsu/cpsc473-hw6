@@ -1,17 +1,56 @@
+/* jshint curly: true, eqeqeq: true, forin: true, immed: true, indent: 4, latedef: true, newcap: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true, node: true */
 /*
     Name: David Dang
     Section: 1
     Node.js Web Service API to flip a coin
+    Improved version with Redis to save stats
+
  */
 "use strict";
 // Declare a set of variables to be use
 var serverPort = 3000;
 var wsStats = "/stats";
 var wsFlip = "/flip";
-var score = {
-    wins: 0,
-    losses: 0
+
+// Declare redis host and port
+var redisServer = {
+    host: "127.0.0.1",
+    port: 6379,
 };
+
+// Declare redis key to store the score
+var key = "flipcoin:score";
+
+// Initialize redis and setup a client
+var redis = require("redis");
+var client = redis.createClient(redisServer.port, redisServer.host);
+
+// Catch client errors
+client.on("error", function (err) {
+    console.log("Client ran into an error: " + err);
+});
+
+client.on("ready", function (err) {
+    if (err !== null) {
+        console.log("Redis Client ready.  Initializing score if needed");
+
+        client.hgetall(key, function (err, result) {
+            if (result === null) {
+                client.hmset(key, {wins: 0, losses: 0}, function (err, result) {
+                    if (result !== null) {
+                        console.log("flipcoin:score initialized");
+                    } else {
+                        console.log("Initialized error: " + err);
+                    }
+                });
+            } else {
+                console.log("Flipcoin:score already set");
+            }
+        });
+    } else {
+        console.log("Having problem connect to redis " + err);
+    }
+});
 
 // Include the express module and initiate the app
 var express = require("express");
@@ -19,7 +58,6 @@ var app = express();
 
 // Include body parser module middleware and configure it
 var parser = require("body-parser");
-
 // Configure express middleware
 app.use(parser.json());
 
@@ -27,9 +65,31 @@ app.use(parser.json());
 app.get(wsStats, function (request, response) {
     console.log("Serving GET on " + request.url);
 
-    // Send back the score statistic
-    response.status(200).json(score).end();
+    // Modify GET stats service to get the data result from redis
+    client.hgetall(key, function (err, result) {
+        if (result !== null) {
+            response.status(200).json(result).end();
+        } else {
+            response.status(400).end("redis error retrieve score");
+        }
+    });
 
+});
+
+// Expose DELETE on /stats
+app.delete(wsStats, function (request, response) {
+    console.log ("Serving DELETE on " + request.url);
+
+    // Code to reset redis to zero
+    client.hmset(key, {wins: 0, losses: 0}, function (err) {
+        if (err === null) {
+            console.log("flipcoin:score reset");
+            response.status(200).end("reset");
+        } else {
+            console.log("flipcoin:score not reset: " + err);
+            response.status(500).end("error reset score");
+        }
+    });
 });
 
 // Expose POST on flip
@@ -59,11 +119,10 @@ app.post(wsFlip, function (request, response) {
                     // Set result
                     flip.result = "win";
                     // Update score
-                    score.wins = score.wins + 1;
-
+                    //score.wins = score.wins + 1;
                 } else {
                     flip.result = "lose";
-                    score.losses = score.losses + 1;
+                    //score.losses = score.losses + 1;
                 }
 
             } else {
@@ -85,11 +144,29 @@ app.post(wsFlip, function (request, response) {
     console.log("Coin flip: " + coin);
     console.log("Result is: " + flip.result);
 
-    response.status(200).json(flip).end();
+    if ( flip.hasOwnProperty("error") ) {
+        // Sent error status back
+        response.status(200).json(flip).end();
+    } else {
+        // No error, need to increase the score by 1 then send response
+        var subkey = (flip.result === "win")? "wins" : "losses";
+
+        client.hincrby(key, subkey, 1, function (err, result) {
+            if (err === null) {
+                console.log( subkey + " is now set to: " + result);
+                response.status(200).json(flip).end();
+            } else {
+                console.log("unable to increase " + subkey + " by 1 " + err);
+                response.status(500).end("Cannot increase score");
+            }
+        });
+    }
+
+
 
 });
 
 // Run the server on the serverPort
-app.listen(3000);
+app.listen(serverPort);
 
 console.log("Server is running on port " + serverPort);
