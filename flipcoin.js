@@ -49,6 +49,7 @@ client.on("ready", function (err) {
         });
     } else {
         console.log("Having problem connect to redis " + err);
+        process.exit(1);
     }
 });
 
@@ -161,8 +162,6 @@ app.post(wsFlip, function (request, response) {
             }
         });
     }
-
-
 
 });
 
