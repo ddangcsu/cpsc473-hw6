@@ -12,47 +12,6 @@ var serverPort = 3000;
 var wsStats = "/stats";
 var wsFlip = "/flip";
 
-// Declare redis host and port
-var redisServer = {
-    host: "127.0.0.1",
-    port: 6379,
-};
-
-// Declare redis key to store the score
-var key = "flipcoin:score";
-
-// Initialize redis and setup a client
-var redis = require("redis");
-var client = redis.createClient(redisServer.port, redisServer.host);
-
-// Catch client errors
-client.on("error", function (err) {
-    console.log("Client ran into an error: " + err);
-});
-
-client.on("ready", function (err) {
-    if (err !== null) {
-        console.log("Redis Client ready.  Initializing score if needed");
-
-        client.hgetall(key, function (err, result) {
-            if (result === null) {
-                client.hmset(key, {wins: 0, losses: 0}, function (err, result) {
-                    if (result !== null) {
-                        console.log("flipcoin:score initialized");
-                    } else {
-                        console.log("Initialized error: " + err);
-                    }
-                });
-            } else {
-                console.log("Flipcoin:score already set");
-            }
-        });
-    } else {
-        console.log("Having problem connect to redis " + err);
-        process.exit(1);
-    }
-});
-
 // Include the express module and initiate the app
 var express = require("express");
 var app = express();
@@ -62,33 +21,29 @@ var parser = require("body-parser");
 // Configure express middleware
 app.use(parser.json());
 
+// Include my module
+var db = require("./hw6_redis.js");
+
 // Expose GET on /stats
 app.get(wsStats, function (request, response) {
     console.log("Serving GET on " + request.url);
-
-    // Modify GET stats service to get the data result from redis
-    client.hgetall(key, function (err, result) {
-        if (result !== null) {
+    db.get(function (result) {
+        if (result !== false) {
             response.status(200).json(result).end();
         } else {
-            response.status(400).end("redis error retrieve score");
+            response.status(200).json({"error":"fail retrieved"}).end();
         }
     });
-
 });
 
 // Expose DELETE on /stats
 app.delete(wsStats, function (request, response) {
     console.log ("Serving DELETE on " + request.url);
-
-    // Code to reset redis to zero
-    client.hmset(key, {wins: 0, losses: 0}, function (err) {
-        if (err === null) {
-            console.log("flipcoin:score reset");
-            response.status(200).end("reset");
+    db.reset(function (success) {
+        if (success) {
+            response.status(200).json({"status": "reset"}).end();
         } else {
-            console.log("flipcoin:score not reset: " + err);
-            response.status(500).end("error reset score");
+            response.status(200).json({"status": "error failed to reset"}).end();
         }
     });
 });
@@ -151,13 +106,10 @@ app.post(wsFlip, function (request, response) {
     } else {
         // No error, need to increase the score by 1 then send response
         var subkey = (flip.result === "win")? "wins" : "losses";
-
-        client.hincrby(key, subkey, 1, function (err, result) {
-            if (err === null) {
-                console.log( subkey + " is now set to: " + result);
+        db.update(subkey, function (success) {
+            if (success) {
                 response.status(200).json(flip).end();
             } else {
-                console.log("unable to increase " + subkey + " by 1 " + err);
                 response.status(500).end("Cannot increase score");
             }
         });
